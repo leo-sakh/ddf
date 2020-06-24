@@ -13,9 +13,9 @@
  */
 package org.codice.ddf.pax.web.jetty;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -30,7 +30,7 @@ import javax.servlet.Servlet;
 import javax.servlet.ServletContext;
 import javax.servlet.SessionCookieConfig;
 import org.junit.Test;
-import org.mockito.Matchers;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
@@ -59,7 +59,7 @@ public class FilterInjectorTest {
     ResponseFilter responseFilter = mock(ResponseFilter.class);
     executorService = mock(ScheduledExecutorService.class);
     FilterInjector injector =
-        new FilterInjector(Arrays.asList(filter), Arrays.asList(responseFilter), executorService);
+        new FilterInjector(Arrays.asList(filter, responseFilter), executorService);
     updateMockReference();
 
     injector.event(curEvent, null);
@@ -70,8 +70,7 @@ public class FilterInjectorTest {
   @Test
   public void testInjectFilterHandlesOnlyServletContext() {
     SecurityJavaSubjectFilter filter = mock(SecurityJavaSubjectFilter.class);
-    FilterInjector injector =
-        new FilterInjector(Arrays.asList(filter), Arrays.asList(filter), executorService);
+    FilterInjector injector = new FilterInjector(Arrays.asList(filter), executorService);
     curEvent = mock(ServiceEvent.class);
     curReference = mock(ServiceReference.class);
     curContext = mock(ServletContext.class);
@@ -93,8 +92,7 @@ public class FilterInjectorTest {
   @Test
   public void testInjectFilterIgnoresUnregisteringEvents() {
     SecurityJavaSubjectFilter filter = mock(SecurityJavaSubjectFilter.class);
-    FilterInjector injector =
-        new FilterInjector(Arrays.asList(filter), Arrays.asList(filter), executorService);
+    FilterInjector injector = new FilterInjector(Arrays.asList(filter), executorService);
     curEvent = mock(ServiceEvent.class);
     when(curEvent.getType()).thenReturn(ServiceEvent.UNREGISTERING);
 
@@ -106,8 +104,7 @@ public class FilterInjectorTest {
   @Test
   public void testInjectFilterIgnoresModifiedEvents() {
     SecurityJavaSubjectFilter filter = mock(SecurityJavaSubjectFilter.class);
-    FilterInjector injector =
-        new FilterInjector(Arrays.asList(filter), Arrays.asList(filter), executorService);
+    FilterInjector injector = new FilterInjector(Arrays.asList(filter), executorService);
     curEvent = mock(ServiceEvent.class);
     when(curEvent.getType()).thenReturn(ServiceEvent.MODIFIED);
 
@@ -119,8 +116,7 @@ public class FilterInjectorTest {
   @Test
   public void testInjectFilterIgnoresModifiedEndMatchEvents() {
     SecurityJavaSubjectFilter filter = mock(SecurityJavaSubjectFilter.class);
-    FilterInjector injector =
-        new FilterInjector(Arrays.asList(filter), Arrays.asList(filter), executorService);
+    FilterInjector injector = new FilterInjector(Arrays.asList(filter), executorService);
     curEvent = mock(ServiceEvent.class);
     when(curEvent.getType()).thenReturn(ServiceEvent.MODIFIED_ENDMATCH);
 
@@ -143,7 +139,7 @@ public class FilterInjectorTest {
     when(context.registerService(
             eq(Filter.class),
             Mockito.any(Filter.class),
-            Matchers.<Dictionary<String, Object>>any()))
+            ArgumentMatchers.<Dictionary<String, Object>>any()))
         .thenReturn(curRegistration);
     when(context.getService(curReference)).thenReturn(curContext);
     when(bundle.getBundleContext()).thenReturn(context);

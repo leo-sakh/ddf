@@ -13,10 +13,14 @@
  */
 package org.codice.solr.factory.impl;
 
+import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.Timer;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.Callable;
 import org.apache.solr.client.solrj.FastStreamingDocsCallback;
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.SolrRequest;
@@ -75,6 +79,64 @@ public abstract class SolrClientProxy extends SolrClient {
    */
   protected abstract SolrClient getProxiedClient();
 
+  enum ExceptionCounter {
+    SOLR_SERVER_EXCEPTION {
+      @Override
+      public void increment() {
+        doIncrement(SolrServerException.class.getName());
+      }
+
+      @Override
+      public <T extends Throwable> boolean isInstance(T throwableObject) {
+        return SolrServerException.class.isInstance(throwableObject);
+      }
+    },
+    IO_EXCEPTION {
+      @Override
+      public void increment() {
+        doIncrement(IOException.class.getName());
+      }
+
+      @Override
+      public <T extends Throwable> boolean isInstance(T throwableObject) {
+        return IOException.class.isInstance(throwableObject);
+      }
+    },
+    EXCEPTION {
+      @Override
+      public void increment() {
+        doIncrement(Exception.class.getName());
+      }
+
+      @Override
+      public <T extends Throwable> boolean isInstance(T throwableObject) {
+        return Exception.class.isInstance(throwableObject);
+      }
+    };
+
+    public static ExceptionCounter fromClass(Throwable ex) {
+      return Arrays.stream(values())
+          .filter(value -> value.isInstance(ex))
+          .findFirst()
+          .orElseThrow(() -> new IllegalArgumentException("No enum value found for " + ex));
+    }
+
+    private static String getCounterName() {
+      return String.join(".", METRIC_PREFIX, "exception");
+    }
+
+    private static void doIncrement(String tag) {
+      Metrics.counter(getCounterName(), "exception", tag);
+    }
+
+    abstract void increment();
+
+    abstract <T extends Throwable> boolean isInstance(T throwableObject);
+  }
+
+  protected static final String METRIC_PREFIX = "ddf.solr.client.proxy";
+  protected Timer handleTimer;
+
   /**
    * Called to proxy all methods except for {@link #getBinder()}, {@link #clone()}, {@link
    * #toString()}, and {@link #close()} to the client.
@@ -86,7 +148,33 @@ public abstract class SolrClientProxy extends SolrClient {
    * @throws IOException if an I/O exception occurs
    */
   protected <T> T handle(Code<T> code) throws SolrServerException, IOException {
-    return code.invoke(getProxiedClient());
+    try {
+      return record(() -> code.invoke(getProxiedClient()));
+    } catch (SolrServerException e) {
+      throw recordException(e);
+    } catch (IOException e) {
+      throw recordException(e);
+    } catch (Exception e) {
+      throw new SolrServerException(recordException(e));
+    }
+  }
+
+  protected <T> T record(Callable<T> callable) throws Exception {
+    if (handleTimer == null) {
+      handleTimer =
+          Timer.builder(String.join(".", METRIC_PREFIX, "handling", "time"))
+              .description("Solr client proxy handle time")
+              .publishPercentiles(0.05, 0.95)
+              .register(Metrics.globalRegistry);
+    }
+
+    return handleTimer.recordCallable(callable);
+  }
+
+  protected <T extends Throwable> T recordException(T exception) {
+    ExceptionCounter.fromClass(exception).increment();
+
+    return exception;
   }
 
   @Override

@@ -174,6 +174,12 @@ public class SourceMetricsImpl implements PreFederatedQueryPlugin, PostFederated
 
     LOGGER.trace("ENTERING: process (for PostFederatedQueryPlugin)");
 
+    if (input == null) {
+      LOGGER.trace("EXITING: process (for PostFederatedQueryPlugin)");
+
+      return input;
+    }
+
     if (null != input) {
       Set<ProcessingDetails> processingDetails = input.getProcessingDetails();
       List<Result> results = input.getResults();

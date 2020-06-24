@@ -140,6 +140,26 @@
             <artifactId>platform-io-internal-api</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.codice.ddf.metrics</groupId>
+            <artifactId>micrometer-bundle</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.codice.ddf.metrics</groupId>
+            <artifactId>micrometer-prometheus-bundle</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.codice.ddf.metrics</groupId>
+            <artifactId>metrics-prometheus-endpoint</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.codice.ddf.metrics</groupId>
+            <artifactId>metrics-servlet-filter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
         <!--feature dependencies-->
         <dependency>
